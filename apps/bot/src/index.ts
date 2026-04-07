@@ -8,7 +8,7 @@ import { DiscordRuntime } from "./discord/client.js";
 import { createHttpServer } from "./server/http.js";
 import { BeepSynthesizer } from "./tts/beep-synthesizer.js";
 import { DiscordVoiceResponder } from "./tts/discord-voice-responder.js";
-import { DiscordTextResponder } from "./tts/responder.js";
+import { DiscordTextResponder, RoutedResponder } from "./tts/responder.js";
 import { LiveKitSpeechSynthesizer } from "./tts/synthesizer.js";
 
 const logger = pino({
@@ -43,49 +43,46 @@ const start = async (): Promise<void> => {
   });
 
   const textResponder = new DiscordTextResponder(discord);
-  const responderMode = env.ENABLE_VOICE_TTS
+  const defaultResponseMode = env.ENABLE_VOICE_TTS
     ? "tts"
     : env.ENABLE_VOICE_BEEP
       ? "beep"
       : "text";
-
-  const responder = (() => {
-    switch (responderMode) {
-      case "tts":
-        return new DiscordVoiceResponder(
-          logger,
-          discord,
-          new LiveKitSpeechSynthesizer({
-            apiKey: env.LIVEKIT_API_KEY,
-            apiSecret: env.LIVEKIT_API_SECRET,
-            model: env.LIVEKIT_TTS_MODEL,
-            voice: env.LIVEKIT_TTS_VOICE,
-            maxChars: env.TTS_MAX_CHARS,
-            ...(env.LIVEKIT_INFERENCE_URL
-              ? { baseURL: env.LIVEKIT_INFERENCE_URL }
-              : {})
-          }),
-          textResponder
-        );
-      case "beep":
-        return new DiscordVoiceResponder(
-          logger,
-          discord,
-          new BeepSynthesizer(),
-          textResponder
-        );
-      default:
-        return textResponder;
-    }
-  })();
+  const beepResponder = new DiscordVoiceResponder(
+    logger,
+    discord,
+    new BeepSynthesizer(),
+    textResponder
+  );
+  const ttsResponder = new DiscordVoiceResponder(
+    logger,
+    discord,
+    new LiveKitSpeechSynthesizer({
+      apiKey: env.LIVEKIT_API_KEY,
+      apiSecret: env.LIVEKIT_API_SECRET,
+      model: env.LIVEKIT_TTS_MODEL,
+      voice: env.LIVEKIT_TTS_VOICE,
+      maxChars: env.TTS_MAX_CHARS,
+      ...(env.LIVEKIT_INFERENCE_URL
+        ? { baseURL: env.LIVEKIT_INFERENCE_URL }
+        : {})
+    }),
+    textResponder
+  );
+  const responder = new RoutedResponder({
+    defaultMode: defaultResponseMode,
+    textResponder,
+    beepResponder,
+    ttsResponder
+  });
 
   logger.info(
     {
-      responderMode,
-      ttsModel: responderMode === "tts" ? env.LIVEKIT_TTS_MODEL : null,
-      ttsVoice: responderMode === "tts" ? env.LIVEKIT_TTS_VOICE : null
+      defaultResponseMode,
+      ttsModel: env.LIVEKIT_TTS_MODEL,
+      ttsVoice: env.LIVEKIT_TTS_VOICE
     },
-    "Responder mode configured"
+    "Responder routing configured"
   );
   const executor = new ActionExecutor(discord, responder);
   const orchestrator = new AgentOrchestrator(

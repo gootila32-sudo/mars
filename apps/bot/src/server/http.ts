@@ -65,7 +65,8 @@ export const createHttpServer = ({
       channelId: parsed.data.channelId,
       transcript: parsed.data.transcript,
       speakerName: parsed.data.speakerName,
-      locale: "en-US"
+      locale: "en-US",
+      responseMode: parsed.data.responseMode
     });
 
     return reply.send(result);

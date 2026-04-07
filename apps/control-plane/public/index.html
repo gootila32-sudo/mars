@@ -10,18 +10,30 @@
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand">
-          <h1>MARS</h1>
-          <p>Discord Voice Agent</p>
+          <p class="eyebrow">MARS</p>
+          <h1>Operations Console</h1>
+          <p class="muted">
+            Website-controlled Discord moderation for live voice channels.
+          </p>
         </div>
 
-        <section class="sidebar-card">
-          <h2>Account</h2>
+        <section class="sidebar-card account-card">
+          <div class="card-head">
+            <h2>Account</h2>
+            <span id="authPill" class="pill is-neutral">Checking</span>
+          </div>
           <p id="authStatus" class="muted">Checking session...</p>
-          <p id="authUserName" class="muted"></p>
+          <p id="authUserName" class="account-name"></p>
           <div class="auth-actions">
-            <a id="loginBtn" class="btn auth-link" href="/auth/discord/login">Login with Discord</a>
-            <a id="inviteBtn" class="btn auth-link is-hidden" href="/auth/discord/invite">Invite Bot</a>
-            <button id="logoutBtn" class="btn auth-ghost is-hidden" type="button">Logout</button>
+            <a id="loginBtn" class="btn btn-primary auth-link" href="/auth/discord/login">
+              Login with Discord
+            </a>
+            <a id="inviteBtn" class="btn btn-secondary auth-link is-hidden" href="/auth/discord/invite">
+              Invite Bot
+            </a>
+            <button id="logoutBtn" class="btn btn-ghost is-hidden" type="button">
+              Logout
+            </button>
           </div>
         </section>
 
@@ -32,94 +44,200 @@
           <button class="nav-btn" type="button" data-tab="logs">Logs</button>
         </nav>
 
-        <section class="sidebar-card">
-          <h2>Stack</h2>
-          <p class="muted">LiveKit-native processing and Discord action runtime.</p>
-        </section>
-
-        <section class="sidebar-card">
-          <h2>Status</h2>
-          <p id="statusText" class="status-text">Ready.</p>
+        <section class="sidebar-card compact">
+          <h2>Reply Mode</h2>
+          <p class="muted">
+            The website now controls whether the bot replies with a beep, text, or TTS per command.
+          </p>
         </section>
       </aside>
 
       <main class="main-panel">
         <header class="main-header">
-          <h2 id="mainTitle">Guild Policy</h2>
-          <p>Simple and production-friendly operations panel.</p>
+          <div>
+            <p class="eyebrow">Control Plane</p>
+            <h2 id="mainTitle">Guild Policy</h2>
+            <p id="mainSubtitle" class="subtitle">
+              Configure the wake word, moderation policy, and operator defaults.
+            </p>
+          </div>
         </header>
 
+        <section id="statusBanner" class="status-banner is-neutral" aria-live="polite">
+          <strong id="statusLabel">Ready</strong>
+          <span id="statusText">Signed-in control is ready.</span>
+        </section>
+
         <section class="content-panel is-active" data-panel="policy">
-          <article class="card">
-            <h3>Guild Policy</h3>
+          <div class="panel-grid">
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <h3>Guild Policy</h3>
+                  <p class="muted">These settings shape how the bot interprets website-issued commands.</p>
+                </div>
+              </div>
 
-            <div class="form-row">
-              <label for="guildId">Guild ID</label>
-              <input id="guildId" type="text" placeholder="123456789012345678" />
-            </div>
+              <div class="form-grid">
+                <div class="form-row">
+                  <label for="guildId">Guild ID</label>
+                  <input id="guildId" type="text" placeholder="123456789012345678" />
+                </div>
 
-            <div class="form-row">
-              <label for="wakeWord">Wake Word</label>
-              <input id="wakeWord" type="text" value="agent" />
-            </div>
+                <div class="form-row">
+                  <label for="wakeWord">Wake Word</label>
+                  <input id="wakeWord" type="text" value="agent" />
+                </div>
 
-            <div class="form-row">
-              <label for="systemPrompt">System Prompt</label>
-              <textarea id="systemPrompt">You are a Discord voice operations agent. Only execute safe moderation actions in this server.</textarea>
-            </div>
+                <div class="form-row form-row-full">
+                  <label for="systemPrompt">System Prompt</label>
+                  <textarea id="systemPrompt">You are a Discord voice operations agent. Only execute safe moderation actions in this server.</textarea>
+                </div>
+              </div>
 
-            <div class="form-row">
-              <label>Allowed Actions</label>
-              <div id="allowedActions" class="check-list"></div>
-            </div>
+              <div class="form-row">
+                <label>Allowed Actions</label>
+                <div id="allowedActions" class="check-list"></div>
+              </div>
 
-            <div class="form-row inline">
-              <input id="enabled" type="checkbox" checked />
-              <label for="enabled">Agent Enabled</label>
-            </div>
+              <label class="toggle-row" for="enabled">
+                <input id="enabled" type="checkbox" checked />
+                <span>Agent enabled for this guild</span>
+              </label>
 
-            <button id="saveGuildBtn" class="btn" type="button">Save Guild Config</button>
-          </article>
+              <div class="action-row">
+                <button id="saveGuildBtn" class="btn btn-primary" type="button">Save Policy</button>
+                <p class="muted meta-copy">
+                  Saving policy also fills the guild ID into the dispatch console.
+                </p>
+              </div>
+            </article>
+
+            <article class="card secondary-card">
+              <div class="card-head">
+                <div>
+                  <h3>Dispatch Reply Mode</h3>
+                  <p class="muted">Choose how the bot acknowledges commands sent from this website.</p>
+                </div>
+              </div>
+
+              <div id="responseModeGroup" class="segmented" role="group" aria-label="Dispatch reply mode">
+                <button class="segment-btn" type="button" data-mode="beep">Beep</button>
+                <button class="segment-btn" type="button" data-mode="text">Text</button>
+                <button class="segment-btn" type="button" data-mode="tts">TTS</button>
+              </div>
+
+              <p id="responseModeHint" class="muted">
+                Beep acknowledgement in the active voice channel after each command.
+              </p>
+
+              <div class="info-stack">
+                <div class="info-block">
+                  <span class="info-label">Current Flow</span>
+                  <strong>Website command -> Discord action -> reply</strong>
+                </div>
+                <div class="info-block">
+                  <span class="info-label">Dispatch Scope</span>
+                  <strong>Per command from this website</strong>
+                </div>
+              </div>
+            </article>
+          </div>
         </section>
 
         <section class="content-panel" data-panel="dispatch">
-          <article class="card">
-            <h3>Dispatch Command</h3>
+          <div class="panel-grid">
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <h3>Dispatch Command</h3>
+                  <p class="muted">Send a command from the website into a live voice channel.</p>
+                </div>
+              </div>
 
-            <div class="form-row">
-              <label for="dispatchGuildId">Guild ID</label>
-              <input id="dispatchGuildId" type="text" />
-            </div>
+              <div class="form-grid">
+                <div class="form-row">
+                  <label for="dispatchGuildId">Guild ID</label>
+                  <input id="dispatchGuildId" type="text" />
+                </div>
 
-            <div class="form-row">
-              <label for="dispatchChannelId">Voice Channel ID</label>
-              <input id="dispatchChannelId" type="text" />
-            </div>
+                <div class="form-row">
+                  <label for="dispatchChannelId">Voice Channel ID</label>
+                  <input id="dispatchChannelId" type="text" />
+                </div>
 
-            <div class="form-row">
-              <label for="dispatchSpeaker">Speaker</label>
-              <input id="dispatchSpeaker" type="text" value="Moderator" />
-            </div>
+                <div class="form-row">
+                  <label for="dispatchSpeaker">Speaker</label>
+                  <input id="dispatchSpeaker" type="text" value="Moderator" />
+                </div>
 
-            <div class="form-row">
-              <label for="dispatchTranscript">Transcript</label>
-              <textarea id="dispatchTranscript">agent mute John</textarea>
-            </div>
+                <div class="form-row form-row-full">
+                  <label for="dispatchTranscript">Transcript</label>
+                  <textarea id="dispatchTranscript">agent mute John</textarea>
+                </div>
+              </div>
 
-            <button id="dispatchBtn" class="btn" type="button">Dispatch</button>
-          </article>
+              <div class="quick-examples">
+                <button class="chip-btn" type="button" data-example="agent mute John">Mute Example</button>
+                <button class="chip-btn" type="button" data-example="agent unmute John">Unmute Example</button>
+                <button class="chip-btn" type="button" data-example="agent deafen John">Deafen Example</button>
+              </div>
+
+              <div class="action-row">
+                <button id="dispatchBtn" class="btn btn-primary" type="button">Send Command</button>
+              </div>
+            </article>
+
+            <article class="card result-card">
+              <div class="card-head">
+                <div>
+                  <h3>Latest Result</h3>
+                  <p class="muted">Immediate dispatch feedback stays here instead of hiding in another tab.</p>
+                </div>
+              </div>
+
+              <div id="resultSummary" class="result-summary is-idle">
+                No command sent yet.
+              </div>
+
+              <div class="result-grid">
+                <div class="result-item">
+                  <span class="info-label">Action</span>
+                  <strong id="resultAction">Waiting</strong>
+                </div>
+                <div class="result-item">
+                  <span class="info-label">Reply Mode</span>
+                  <strong id="resultMode">Beep</strong>
+                </div>
+                <div class="result-item result-item-wide">
+                  <span class="info-label">Detail</span>
+                  <strong id="resultDetail">No dispatch has been sent yet.</strong>
+                </div>
+              </div>
+            </article>
+          </div>
         </section>
 
         <section class="content-panel" data-panel="guilds">
           <article class="card">
-            <h3>Configured Guilds</h3>
+            <div class="card-head">
+              <div>
+                <h3>Configured Guilds</h3>
+                <p class="muted">Saved guild policy records from the control-plane database.</p>
+              </div>
+            </div>
             <div id="guildList" class="list"></div>
           </article>
         </section>
 
         <section class="content-panel" data-panel="logs">
           <article class="card">
-            <h3>Recent Dispatch Logs</h3>
+            <div class="card-head">
+              <div>
+                <h3>Recent Dispatch Logs</h3>
+                <p class="muted">The newest dispatch attempts and backend outcomes.</p>
+              </div>
+            </div>
             <div id="logList" class="list"></div>
           </article>
         </section>

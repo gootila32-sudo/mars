@@ -6,12 +6,41 @@ const ACTIONS = [
   "MOVE_MEMBER"
 ];
 
-const TAB_TITLES = {
-  policy: "Guild Policy",
-  dispatch: "Dispatch",
-  guilds: "Configured Guilds",
-  logs: "Dispatch Logs"
+const TAB_META = {
+  policy: {
+    title: "Guild Policy",
+    subtitle: "Configure the wake word, moderation policy, and operator defaults."
+  },
+  dispatch: {
+    title: "Dispatch",
+    subtitle: "Send website-issued commands directly into a live voice channel."
+  },
+  guilds: {
+    title: "Configured Guilds",
+    subtitle: "Review saved guild policies and jump back into editing quickly."
+  },
+  logs: {
+    title: "Dispatch Logs",
+    subtitle: "See the latest backend outcomes without digging through service logs."
+  }
 };
+
+const RESPONSE_MODES = {
+  beep: {
+    label: "Beep",
+    hint: "Beep acknowledgement in the active voice channel after each command."
+  },
+  text: {
+    label: "Text",
+    hint: "Send a text acknowledgement instead of joining voice for a beep."
+  },
+  tts: {
+    label: "TTS",
+    hint: "Speak the acknowledgement in voice using the LiveKit TTS path."
+  }
+};
+
+const RESPONSE_MODE_STORAGE_KEY = "mars.dispatch.responseMode";
 
 const state = {
   guilds: [],
@@ -20,6 +49,10 @@ const state = {
     authenticated: false,
     user: null,
     inviteUrl: "/auth/discord/invite"
+  },
+  dispatch: {
+    responseMode: loadStoredResponseMode(),
+    result: null
   }
 };
 
@@ -37,35 +70,76 @@ const nodes = {
   dispatchSpeaker: byId("dispatchSpeaker"),
   dispatchTranscript: byId("dispatchTranscript"),
   dispatchBtn: byId("dispatchBtn"),
+  statusBanner: byId("statusBanner"),
+  statusLabel: byId("statusLabel"),
   statusText: byId("statusText"),
   guildList: byId("guildList"),
   logList: byId("logList"),
   mainTitle: byId("mainTitle"),
+  mainSubtitle: byId("mainSubtitle"),
   authStatus: byId("authStatus"),
   authUserName: byId("authUserName"),
+  authPill: byId("authPill"),
   loginBtn: byId("loginBtn"),
   inviteBtn: byId("inviteBtn"),
   logoutBtn: byId("logoutBtn"),
+  responseModeGroup: byId("responseModeGroup"),
+  responseModeHint: byId("responseModeHint"),
+  resultSummary: byId("resultSummary"),
+  resultAction: byId("resultAction"),
+  resultMode: byId("resultMode"),
+  resultDetail: byId("resultDetail"),
   navButtons: Array.from(document.querySelectorAll(".nav-btn")),
-  panels: Array.from(document.querySelectorAll(".content-panel"))
+  panels: Array.from(document.querySelectorAll(".content-panel")),
+  responseModeButtons: Array.from(document.querySelectorAll(".segment-btn")),
+  exampleButtons: Array.from(document.querySelectorAll(".chip-btn"))
 };
 
-function setStatus(message) {
+function loadStoredResponseMode() {
+  try {
+    const stored = window.localStorage.getItem(RESPONSE_MODE_STORAGE_KEY);
+    return Object.hasOwn(RESPONSE_MODES, stored) ? stored : "beep";
+  } catch {
+    return "beep";
+  }
+}
+
+function storeResponseMode(mode) {
+  try {
+    window.localStorage.setItem(RESPONSE_MODE_STORAGE_KEY, mode);
+  } catch {
+    // Ignore storage write failures in restrictive browsers.
+  }
+}
+
+function setStatus(label, message, tone = "neutral") {
+  nodes.statusLabel.textContent = label;
   nodes.statusText.textContent = message;
+  nodes.statusBanner.className = `status-banner is-${tone}`;
 }
 
 function setActiveTab(tab) {
+  const meta = TAB_META[tab] || TAB_META.policy;
+
   nodes.navButtons.forEach((button) => {
-    const isActive = button.dataset.tab === tab;
-    button.classList.toggle("is-active", isActive);
+    button.classList.toggle("is-active", button.dataset.tab === tab);
   });
 
   nodes.panels.forEach((panel) => {
-    const isActive = panel.dataset.panel === tab;
-    panel.classList.toggle("is-active", isActive);
+    panel.classList.toggle("is-active", panel.dataset.panel === tab);
   });
 
-  nodes.mainTitle.textContent = TAB_TITLES[tab] || "Control Plane";
+  nodes.mainTitle.textContent = meta.title;
+  nodes.mainSubtitle.textContent = meta.subtitle;
+}
+
+function setButtonBusy(button, busy, busyLabel) {
+  if (!button.dataset.defaultLabel) {
+    button.dataset.defaultLabel = button.textContent;
+  }
+
+  button.disabled = busy;
+  button.textContent = busy ? busyLabel : button.dataset.defaultLabel;
 }
 
 function renderAllowedActions(selected = ACTIONS) {
@@ -95,12 +169,38 @@ function getSelectedActions() {
   ).map((item) => item.value);
 }
 
+function applyResponseModeState() {
+  nodes.responseModeButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.mode === state.dispatch.responseMode);
+  });
+
+  const meta = RESPONSE_MODES[state.dispatch.responseMode] || RESPONSE_MODES.beep;
+  nodes.responseModeHint.textContent = meta.hint;
+  nodes.resultMode.textContent = meta.label;
+}
+
+function setDispatchResult({
+  tone = "idle",
+  summary = "No command sent yet.",
+  action = "Waiting",
+  detail = "No dispatch has been sent yet.",
+  mode = state.dispatch.responseMode
+} = {}) {
+  state.dispatch.result = { tone, summary, action, detail, mode };
+
+  nodes.resultSummary.className = `result-summary is-${tone}`;
+  nodes.resultSummary.textContent = summary;
+  nodes.resultAction.textContent = action;
+  nodes.resultDetail.textContent = detail;
+  nodes.resultMode.textContent =
+    RESPONSE_MODES[mode]?.label ?? RESPONSE_MODES.beep.label;
+}
+
 function applyAuthState() {
   const authenticated = state.auth.authenticated;
 
   nodes.saveGuildBtn.disabled = !authenticated;
   nodes.dispatchBtn.disabled = !authenticated;
-
   nodes.loginBtn.classList.toggle("is-hidden", authenticated);
   nodes.inviteBtn.classList.toggle("is-hidden", !authenticated);
   nodes.logoutBtn.classList.toggle("is-hidden", !authenticated);
@@ -108,6 +208,8 @@ function applyAuthState() {
   if (!authenticated) {
     nodes.authStatus.textContent = "Sign in required.";
     nodes.authUserName.textContent = "";
+    nodes.authPill.textContent = "Offline";
+    nodes.authPill.className = "pill is-neutral";
     nodes.inviteBtn.href = "/auth/discord/invite";
     return;
   }
@@ -115,6 +217,8 @@ function applyAuthState() {
   const displayName = state.auth.user.globalName || state.auth.user.username;
   nodes.authStatus.textContent = "Signed in";
   nodes.authUserName.textContent = displayName;
+  nodes.authPill.textContent = "Active";
+  nodes.authPill.className = "pill is-success";
   nodes.inviteBtn.href = state.auth.inviteUrl || "/auth/discord/invite";
 }
 
@@ -127,30 +231,52 @@ function setUnauthenticatedState() {
   applyAuthState();
 }
 
+async function getJsonOrNull(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 async function loadAuth() {
-  const response = await fetch("/auth/me", {
-    credentials: "same-origin"
-  });
+  try {
+    const response = await fetch("/auth/me", {
+      credentials: "same-origin"
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      setUnauthenticatedState();
+      return;
+    }
+
+    const payload = await response.json();
+
+    if (!payload.authenticated) {
+      setUnauthenticatedState();
+      return;
+    }
+
+    state.auth = {
+      authenticated: true,
+      user: payload.user,
+      inviteUrl: payload.inviteUrl
+    };
+
+    applyAuthState();
+  } catch {
     setUnauthenticatedState();
-    return;
+    setStatus("Connection", "Unable to reach the auth service right now.", "danger");
   }
+}
 
-  const payload = await response.json();
-
-  if (!payload.authenticated) {
-    setUnauthenticatedState();
-    return;
-  }
-
-  state.auth = {
-    authenticated: true,
-    user: payload.user,
-    inviteUrl: payload.inviteUrl
-  };
-
-  applyAuthState();
+function fillGuildForms(guild) {
+  nodes.guildId.value = guild.guildId;
+  nodes.wakeWord.value = guild.wakeWord;
+  nodes.systemPrompt.value = guild.systemPrompt;
+  nodes.enabled.checked = guild.enabled;
+  renderAllowedActions(guild.allowedActions);
+  nodes.dispatchGuildId.value = guild.guildId;
 }
 
 function renderGuilds() {
@@ -203,16 +329,12 @@ function renderGuilds() {
     });
 
     const edit = document.createElement("button");
-    edit.className = "btn";
-    edit.textContent = "Edit";
+    edit.className = "btn btn-secondary";
+    edit.type = "button";
+    edit.textContent = "Edit Policy";
     edit.addEventListener("click", () => {
-      nodes.guildId.value = guild.guildId;
-      nodes.wakeWord.value = guild.wakeWord;
-      nodes.systemPrompt.value = guild.systemPrompt;
-      nodes.enabled.checked = guild.enabled;
-      renderAllowedActions(guild.allowedActions);
-      nodes.dispatchGuildId.value = guild.guildId;
-      setStatus(`Loaded guild ${guild.guildId}`);
+      fillGuildForms(guild);
+      setStatus("Loaded", `Loaded guild ${guild.guildId} into the editor.`, "neutral");
       setActiveTab("policy");
     });
 
@@ -220,7 +342,6 @@ function renderGuilds() {
     item.appendChild(wakeWord);
     item.appendChild(actions);
     item.appendChild(edit);
-
     nodes.guildList.appendChild(item);
   });
 }
@@ -265,13 +386,18 @@ function renderLogs() {
     detail.className = "muted";
     detail.textContent = log.detail;
 
+    const transcript = document.createElement("p");
+    transcript.className = "muted";
+    transcript.textContent = `Transcript: ${log.transcript}`;
+
     const meta = document.createElement("p");
     meta.className = "muted";
     const time = new Date(log.createdAt).toLocaleString();
-    meta.textContent = `${time} - Speaker: ${log.speakerName}`;
+    meta.textContent = `${time} - Speaker: ${log.speakerName} - Channel: ${log.channelId}`;
 
     item.appendChild(top);
     item.appendChild(detail);
+    item.appendChild(transcript);
     item.appendChild(meta);
     nodes.logList.appendChild(item);
   });
@@ -284,25 +410,29 @@ async function loadGuilds() {
     return;
   }
 
-  const response = await fetch("/api/guilds", {
-    credentials: "same-origin"
-  });
+  try {
+    const response = await fetch("/api/guilds", {
+      credentials: "same-origin"
+    });
 
-  if (response.status === 401) {
-    setUnauthenticatedState();
-    setStatus("Session expired. Login again.");
-    state.guilds = [];
+    if (response.status === 401) {
+      setUnauthenticatedState();
+      setStatus("Session", "Session expired. Login again.", "warning");
+      state.guilds = [];
+      renderGuilds();
+      return;
+    }
+
+    if (!response.ok) {
+      setStatus("Guilds", "Failed to load guilds.", "danger");
+      return;
+    }
+
+    state.guilds = await response.json();
     renderGuilds();
-    return;
+  } catch {
+    setStatus("Guilds", "Unable to load guilds right now.", "danger");
   }
-
-  if (!response.ok) {
-    setStatus("Failed to load guilds.");
-    return;
-  }
-
-  state.guilds = await response.json();
-  renderGuilds();
 }
 
 async function loadLogs() {
@@ -312,25 +442,29 @@ async function loadLogs() {
     return;
   }
 
-  const response = await fetch("/api/dispatch", {
-    credentials: "same-origin"
-  });
+  try {
+    const response = await fetch("/api/dispatch", {
+      credentials: "same-origin"
+    });
 
-  if (response.status === 401) {
-    setUnauthenticatedState();
-    setStatus("Session expired. Login again.");
-    state.logs = [];
+    if (response.status === 401) {
+      setUnauthenticatedState();
+      setStatus("Session", "Session expired. Login again.", "warning");
+      state.logs = [];
+      renderLogs();
+      return;
+    }
+
+    if (!response.ok) {
+      setStatus("Logs", "Failed to load dispatch logs.", "danger");
+      return;
+    }
+
+    state.logs = await response.json();
     renderLogs();
-    return;
+  } catch {
+    setStatus("Logs", "Unable to load dispatch logs right now.", "danger");
   }
-
-  if (!response.ok) {
-    setStatus("Failed to load dispatch logs.");
-    return;
-  }
-
-  state.logs = await response.json();
-  renderLogs();
 }
 
 function ensureAuthenticated() {
@@ -338,7 +472,7 @@ function ensureAuthenticated() {
     return true;
   }
 
-  setStatus("Login with Discord first.");
+  setStatus("Auth Required", "Login with Discord first.", "warning");
   return false;
 }
 
@@ -356,31 +490,44 @@ async function saveGuild() {
   };
 
   if (!payload.guildId) {
-    setStatus("Guild ID is required.");
+    setStatus("Missing Guild", "Guild ID is required.", "warning");
     return;
   }
 
-  const response = await fetch("/api/guilds", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload)
-  });
+  setButtonBusy(nodes.saveGuildBtn, true, "Saving...");
 
-  if (response.status === 401) {
-    setUnauthenticatedState();
-    setStatus("Session expired. Login again.");
-    return;
+  try {
+    const response = await fetch("/api/guilds", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (response.status === 401) {
+      setUnauthenticatedState();
+      setStatus("Session", "Session expired. Login again.", "warning");
+      return;
+    }
+
+    if (!response.ok) {
+      const payload = await getJsonOrNull(response);
+      setStatus(
+        "Save Failed",
+        payload?.error ?? "Failed to save guild config.",
+        "danger"
+      );
+      return;
+    }
+
+    nodes.dispatchGuildId.value = payload.guildId;
+    setStatus("Saved", "Guild config saved successfully.", "success");
+    await loadGuilds();
+  } catch {
+    setStatus("Save Failed", "Unable to save guild config right now.", "danger");
+  } finally {
+    setButtonBusy(nodes.saveGuildBtn, false, "Saving...");
   }
-
-  if (!response.ok) {
-    setStatus("Failed to save guild config.");
-    return;
-  }
-
-  nodes.dispatchGuildId.value = payload.guildId;
-  setStatus("Guild config saved.");
-  await loadGuilds();
 }
 
 async function dispatchCommand() {
@@ -392,37 +539,86 @@ async function dispatchCommand() {
     guildId: nodes.dispatchGuildId.value.trim(),
     channelId: nodes.dispatchChannelId.value.trim(),
     speakerName: nodes.dispatchSpeaker.value.trim() || "Moderator",
-    transcript: nodes.dispatchTranscript.value.trim()
+    transcript: nodes.dispatchTranscript.value.trim(),
+    responseMode: state.dispatch.responseMode
   };
 
   if (!payload.guildId || !payload.channelId || !payload.transcript) {
-    setStatus("Guild, channel, and transcript are required for dispatch.");
+    setStatus(
+      "Missing Fields",
+      "Guild, channel, and transcript are required for dispatch.",
+      "warning"
+    );
     return;
   }
 
-  const response = await fetch("/api/dispatch", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload)
+  setButtonBusy(nodes.dispatchBtn, true, "Sending...");
+  setDispatchResult({
+    tone: "idle",
+    summary: "Dispatch in progress...",
+    action: "Pending",
+    detail: "Waiting for the bot service to respond.",
+    mode: state.dispatch.responseMode
   });
 
-  if (response.status === 401) {
-    setUnauthenticatedState();
-    setStatus("Session expired. Login again.");
-    return;
-  }
+  try {
+    const response = await fetch("/api/dispatch", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-  if (!response.ok) {
-    setStatus("Dispatch failed. Check bot service and API key.");
+    if (response.status === 401) {
+      setUnauthenticatedState();
+      setStatus("Session", "Session expired. Login again.", "warning");
+      return;
+    }
+
+    const body = await getJsonOrNull(response);
+
+    if (!response.ok) {
+      const detail = body?.detail ?? body?.error ?? "Dispatch failed.";
+      setStatus("Dispatch Failed", detail, "danger");
+      setDispatchResult({
+        tone: "danger",
+        summary: "Dispatch failed before the bot could complete it.",
+        action: "ERROR",
+        detail,
+        mode: state.dispatch.responseMode
+      });
+      await loadLogs();
+      return;
+    }
+
+    setStatus(
+      "Dispatch Complete",
+      `${body.action} - ${body.detail}`,
+      body.action === "NOOP" ? "warning" : "success"
+    );
+    setDispatchResult({
+      tone: body.action === "NOOP" ? "warning" : "success",
+      summary:
+        body.action === "NOOP"
+          ? "Command reached the bot but no moderation action was executed."
+          : "Command completed and the bot returned a reply.",
+      action: body.action,
+      detail: body.detail,
+      mode: state.dispatch.responseMode
+    });
     await loadLogs();
-    return;
+  } catch {
+    setStatus("Dispatch Failed", "Unable to reach the dispatch API.", "danger");
+    setDispatchResult({
+      tone: "danger",
+      summary: "The website could not reach the dispatch API.",
+      action: "ERROR",
+      detail: "Network error while sending the command.",
+      mode: state.dispatch.responseMode
+    });
+  } finally {
+    setButtonBusy(nodes.dispatchBtn, false, "Sending...");
   }
-
-  const result = await response.json();
-  setStatus(`Dispatch result: ${result.action} - ${result.detail}`);
-  await loadLogs();
-  setActiveTab("logs");
 }
 
 async function logout() {
@@ -436,7 +632,7 @@ async function logout() {
   state.logs = [];
   renderGuilds();
   renderLogs();
-  setStatus("Logged out.");
+  setStatus("Logged Out", "Discord session closed.", "neutral");
 }
 
 function applyAuthResultFromQuery() {
@@ -448,9 +644,9 @@ function applyAuthResultFromQuery() {
   }
 
   if (authStatus === "success") {
-    setStatus("Discord login successful.");
+    setStatus("Signed In", "Discord login successful.", "success");
   } else {
-    setStatus("Discord login failed. Please try again.");
+    setStatus("Auth Failed", "Discord login failed. Please try again.", "danger");
   }
 
   params.delete("auth");
@@ -463,11 +659,34 @@ nodes.navButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const tab = button.dataset.tab;
 
-    if (!tab) {
+    if (tab) {
+      setActiveTab(tab);
+    }
+  });
+});
+
+nodes.responseModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const mode = button.dataset.mode;
+
+    if (!Object.hasOwn(RESPONSE_MODES, mode)) {
       return;
     }
 
-    setActiveTab(tab);
+    state.dispatch.responseMode = mode;
+    storeResponseMode(mode);
+    applyResponseModeState();
+    setStatus(
+      "Reply Mode",
+      `Dispatch reply mode set to ${RESPONSE_MODES[mode].label}.`,
+      "neutral"
+    );
+  });
+});
+
+nodes.exampleButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    nodes.dispatchTranscript.value = button.dataset.example || nodes.dispatchTranscript.value;
   });
 });
 
@@ -484,8 +703,11 @@ nodes.logoutBtn.addEventListener("click", () => {
 });
 
 renderAllowedActions();
+applyResponseModeState();
+setDispatchResult();
 setActiveTab("policy");
 applyAuthResultFromQuery();
+
 void (async () => {
   await loadAuth();
   await loadGuilds();

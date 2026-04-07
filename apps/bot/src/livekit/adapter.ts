@@ -50,6 +50,7 @@ export const mapLiveKitToTranscriptEvent = (
     speakerName:
       payload.participant?.name ?? payload.participant?.identity ?? "unknown",
     transcript: transcriptText,
-    locale: payload.transcript?.language ?? "en-US"
+    locale: payload.transcript?.language ?? "en-US",
+    responseMode: "beep"
   };
 };

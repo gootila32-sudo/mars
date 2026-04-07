@@ -514,6 +514,15 @@ app.post("/api/dispatch", async (request, reply) => {
   }
 
   if (!botResponse.ok) {
+    let detail = `Bot service failed with status ${botResponse.status}`;
+
+    try {
+      const payload = (await botResponse.json()) as { detail?: string; error?: string };
+      detail = payload.detail ?? payload.error ?? detail;
+    } catch {
+      // Keep the generic detail if the bot response is not JSON.
+    }
+
     await prisma.dispatchLog.create({
       data: {
         guildId: parsed.data.guildId,
@@ -521,14 +530,15 @@ app.post("/api/dispatch", async (request, reply) => {
         transcript: parsed.data.transcript,
         speakerName: parsed.data.speakerName,
         action: "ERROR",
-        detail: `Bot service failed with status ${botResponse.status}`,
+        detail,
         ok: false
       }
     });
 
     return reply.code(502).send({
       error: "Bot service unavailable",
-      status: botResponse.status
+      status: botResponse.status,
+      detail
     });
   }
 
