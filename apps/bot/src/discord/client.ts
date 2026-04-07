@@ -10,6 +10,7 @@ export class DiscordRuntime {
     this.client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildVoiceStates
       ]
