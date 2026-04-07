@@ -14,6 +14,17 @@
           <p>Discord Voice Agent</p>
         </div>
 
+        <section class="sidebar-card">
+          <h2>Account</h2>
+          <p id="authStatus" class="muted">Checking session...</p>
+          <p id="authUserName" class="muted"></p>
+          <div class="auth-actions">
+            <a id="loginBtn" class="btn auth-link" href="/auth/discord/login">Login with Discord</a>
+            <a id="inviteBtn" class="btn auth-link is-hidden" href="/auth/discord/invite">Invite Bot</a>
+            <button id="logoutBtn" class="btn auth-ghost is-hidden" type="button">Logout</button>
+          </div>
+        </section>
+
         <nav class="nav" aria-label="Main navigation">
           <button class="nav-btn is-active" type="button" data-tab="policy">Guild Policy</button>
           <button class="nav-btn" type="button" data-tab="dispatch">Dispatch</button>

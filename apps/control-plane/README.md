@@ -10,6 +10,8 @@ TypeScript Fastify service for bot management with a minimal Discord-style dashb
 
 ## Features
 
+- Discord OAuth login/logout
+- Invite bot flow after user authentication
 - Guild policy CRUD
 - Test dispatch to bot runtime
 - Dispatch log timeline

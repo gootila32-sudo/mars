@@ -15,7 +15,12 @@ const TAB_TITLES = {
 
 const state = {
   guilds: [],
-  logs: []
+  logs: [],
+  auth: {
+    authenticated: false,
+    user: null,
+    inviteUrl: "/auth/discord/invite"
+  }
 };
 
 const byId = (id) => document.getElementById(id);
@@ -36,6 +41,11 @@ const nodes = {
   guildList: byId("guildList"),
   logList: byId("logList"),
   mainTitle: byId("mainTitle"),
+  authStatus: byId("authStatus"),
+  authUserName: byId("authUserName"),
+  loginBtn: byId("loginBtn"),
+  inviteBtn: byId("inviteBtn"),
+  logoutBtn: byId("logoutBtn"),
   navButtons: Array.from(document.querySelectorAll(".nav-btn")),
   panels: Array.from(document.querySelectorAll(".content-panel"))
 };
@@ -85,30 +95,74 @@ function getSelectedActions() {
   ).map((item) => item.value);
 }
 
-async function loadGuilds() {
-  const response = await fetch("/api/guilds");
-  if (!response.ok) {
-    setStatus("Failed to load guilds.");
+function applyAuthState() {
+  const authenticated = state.auth.authenticated;
+
+  nodes.saveGuildBtn.disabled = !authenticated;
+  nodes.dispatchBtn.disabled = !authenticated;
+
+  nodes.loginBtn.classList.toggle("is-hidden", authenticated);
+  nodes.inviteBtn.classList.toggle("is-hidden", !authenticated);
+  nodes.logoutBtn.classList.toggle("is-hidden", !authenticated);
+
+  if (!authenticated) {
+    nodes.authStatus.textContent = "Sign in required.";
+    nodes.authUserName.textContent = "";
+    nodes.inviteBtn.href = "/auth/discord/invite";
     return;
   }
 
-  state.guilds = await response.json();
-  renderGuilds();
+  const displayName = state.auth.user.globalName || state.auth.user.username;
+  nodes.authStatus.textContent = "Signed in";
+  nodes.authUserName.textContent = displayName;
+  nodes.inviteBtn.href = state.auth.inviteUrl || "/auth/discord/invite";
 }
 
-async function loadLogs() {
-  const response = await fetch("/api/dispatch");
+function setUnauthenticatedState() {
+  state.auth = {
+    authenticated: false,
+    user: null,
+    inviteUrl: "/auth/discord/invite"
+  };
+  applyAuthState();
+}
+
+async function loadAuth() {
+  const response = await fetch("/auth/me", {
+    credentials: "same-origin"
+  });
+
   if (!response.ok) {
-    setStatus("Failed to load dispatch logs.");
+    setUnauthenticatedState();
     return;
   }
 
-  state.logs = await response.json();
-  renderLogs();
+  const payload = await response.json();
+
+  if (!payload.authenticated) {
+    setUnauthenticatedState();
+    return;
+  }
+
+  state.auth = {
+    authenticated: true,
+    user: payload.user,
+    inviteUrl: payload.inviteUrl
+  };
+
+  applyAuthState();
 }
 
 function renderGuilds() {
   nodes.guildList.innerHTML = "";
+
+  if (!state.auth.authenticated) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Login with Discord to view guilds.";
+    nodes.guildList.appendChild(empty);
+    return;
+  }
 
   if (!state.guilds.length) {
     const empty = document.createElement("p");
@@ -174,6 +228,14 @@ function renderGuilds() {
 function renderLogs() {
   nodes.logList.innerHTML = "";
 
+  if (!state.auth.authenticated) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Login with Discord to view logs.";
+    nodes.logList.appendChild(empty);
+    return;
+  }
+
   if (!state.logs.length) {
     const empty = document.createElement("p");
     empty.className = "muted";
@@ -215,7 +277,76 @@ function renderLogs() {
   });
 }
 
+async function loadGuilds() {
+  if (!state.auth.authenticated) {
+    state.guilds = [];
+    renderGuilds();
+    return;
+  }
+
+  const response = await fetch("/api/guilds", {
+    credentials: "same-origin"
+  });
+
+  if (response.status === 401) {
+    setUnauthenticatedState();
+    setStatus("Session expired. Login again.");
+    state.guilds = [];
+    renderGuilds();
+    return;
+  }
+
+  if (!response.ok) {
+    setStatus("Failed to load guilds.");
+    return;
+  }
+
+  state.guilds = await response.json();
+  renderGuilds();
+}
+
+async function loadLogs() {
+  if (!state.auth.authenticated) {
+    state.logs = [];
+    renderLogs();
+    return;
+  }
+
+  const response = await fetch("/api/dispatch", {
+    credentials: "same-origin"
+  });
+
+  if (response.status === 401) {
+    setUnauthenticatedState();
+    setStatus("Session expired. Login again.");
+    state.logs = [];
+    renderLogs();
+    return;
+  }
+
+  if (!response.ok) {
+    setStatus("Failed to load dispatch logs.");
+    return;
+  }
+
+  state.logs = await response.json();
+  renderLogs();
+}
+
+function ensureAuthenticated() {
+  if (state.auth.authenticated) {
+    return true;
+  }
+
+  setStatus("Login with Discord first.");
+  return false;
+}
+
 async function saveGuild() {
+  if (!ensureAuthenticated()) {
+    return;
+  }
+
   const payload = {
     guildId: nodes.guildId.value.trim(),
     wakeWord: nodes.wakeWord.value.trim(),
@@ -231,9 +362,16 @@ async function saveGuild() {
 
   const response = await fetch("/api/guilds", {
     method: "POST",
+    credentials: "same-origin",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload)
   });
+
+  if (response.status === 401) {
+    setUnauthenticatedState();
+    setStatus("Session expired. Login again.");
+    return;
+  }
 
   if (!response.ok) {
     setStatus("Failed to save guild config.");
@@ -246,6 +384,10 @@ async function saveGuild() {
 }
 
 async function dispatchCommand() {
+  if (!ensureAuthenticated()) {
+    return;
+  }
+
   const payload = {
     guildId: nodes.dispatchGuildId.value.trim(),
     channelId: nodes.dispatchChannelId.value.trim(),
@@ -260,9 +402,16 @@ async function dispatchCommand() {
 
   const response = await fetch("/api/dispatch", {
     method: "POST",
+    credentials: "same-origin",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload)
   });
+
+  if (response.status === 401) {
+    setUnauthenticatedState();
+    setStatus("Session expired. Login again.");
+    return;
+  }
 
   if (!response.ok) {
     setStatus("Dispatch failed. Check bot service and API key.");
@@ -274,6 +423,40 @@ async function dispatchCommand() {
   setStatus(`Dispatch result: ${result.action} - ${result.detail}`);
   await loadLogs();
   setActiveTab("logs");
+}
+
+async function logout() {
+  await fetch("/auth/logout", {
+    method: "POST",
+    credentials: "same-origin"
+  });
+
+  setUnauthenticatedState();
+  state.guilds = [];
+  state.logs = [];
+  renderGuilds();
+  renderLogs();
+  setStatus("Logged out.");
+}
+
+function applyAuthResultFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const authStatus = params.get("auth");
+
+  if (!authStatus) {
+    return;
+  }
+
+  if (authStatus === "success") {
+    setStatus("Discord login successful.");
+  } else {
+    setStatus("Discord login failed. Please try again.");
+  }
+
+  params.delete("auth");
+  const query = params.toString();
+  const target = `${window.location.pathname}${query ? `?${query}` : ""}`;
+  window.history.replaceState({}, "", target);
 }
 
 nodes.navButtons.forEach((button) => {
@@ -296,7 +479,15 @@ nodes.dispatchBtn.addEventListener("click", () => {
   void dispatchCommand();
 });
 
+nodes.logoutBtn.addEventListener("click", () => {
+  void logout();
+});
+
 renderAllowedActions();
 setActiveTab("policy");
-void loadGuilds();
-void loadLogs();
+applyAuthResultFromQuery();
+void (async () => {
+  await loadAuth();
+  await loadGuilds();
+  await loadLogs();
+})();

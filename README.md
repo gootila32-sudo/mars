@@ -104,14 +104,14 @@ Set bot-control plane connectivity:
 ## Security Notes
 
 - Internal bot/control-plane APIs are protected by `x-api-key`.
-- Add Discord OAuth admin auth in control plane before public release.
-- Add audit trails and role checks for production moderation teams.
+- Discord OAuth login is required for control-plane management actions.
+- Add audit trails and RBAC allowlists for production moderation teams.
 - Tune response behavior per server (text-only, beep acknowledgement, or full TTS).
 
 ## Next Market-Level Upgrades
 
 1. LiveKit webhook signature verification.
-2. Real Discord OAuth and team RBAC in control plane.
+2. Team RBAC and owner/admin allowlists in control plane.
 3. Redis queue + retry strategy for action execution.
 4. Observability (OpenTelemetry, structured trace IDs, alerting).
 5. Policy simulator + approval workflow for risky actions.

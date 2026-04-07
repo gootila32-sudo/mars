@@ -71,6 +71,11 @@ body {
   font: inherit;
 }
 
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .nav-btn:hover {
   background: var(--surface-soft);
   color: var(--text);
@@ -209,6 +214,37 @@ textarea {
 
 .btn:hover {
   background: var(--primary-hover);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.auth-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.auth-link {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+}
+
+.auth-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.auth-ghost:hover {
+  background: var(--surface-soft);
+}
+
+.is-hidden {
+  display: none !important;
 }
 
 .list {

@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.0.2",
     "@fastify/static": "^8.2.0",
     "@mars/contracts": "0.1.0",
     "@prisma/client": "^6.4.1",
