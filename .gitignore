@@ -1,0 +1,11 @@
+node_modules
+.npm
+dist
+.next
+.env
+.env.*
+!.env.example
+coverage
+*.log
+apps/control-plane/prisma/dev.db
+apps/control-plane/prisma/dev.db-journal

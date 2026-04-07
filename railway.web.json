@@ -1,0 +1,1 @@
+{ "deploy": { "startCommand": "npm run railway:web" } }

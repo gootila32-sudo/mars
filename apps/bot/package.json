@@ -1,0 +1,32 @@
+{
+  "name": "@mars/bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "npm run build --workspace @mars/contracts && tsc -p tsconfig.json",
+    "dev": "npm run build --workspace @mars/contracts && tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@discordjs/voice": "^0.18.0",
+    "@livekit/agents": "^1.2.3",
+    "@mars/contracts": "0.1.0",
+    "discord.js": "^14.19.3",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.2.1",
+    "ffmpeg-static": "^5.2.0",
+    "libsodium-wrappers": "^0.7.15",
+    "opusscript": "^0.1.1",
+    "pino": "^9.6.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3"
+  }
+}

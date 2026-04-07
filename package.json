@@ -1,0 +1,22 @@
+{
+  "name": "mars-discord-ai-platform",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspace @mars/bot",
+    "dev:bot": "npm run dev --workspace @mars/bot",
+    "dev:web": "npm run dev --workspace @mars/control-plane",
+    "railway:bot": "npm run build --workspace @mars/bot && npm run start --workspace @mars/bot",
+    "railway:web": "npm run build --workspace @mars/control-plane && npm run start --workspace @mars/control-plane",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

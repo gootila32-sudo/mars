@@ -1,0 +1,29 @@
+{
+  "name": "@mars/control-plane",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build --workspace @mars/contracts && tsx watch src/index.ts",
+    "build": "npm run build --workspace @mars/contracts && prisma generate && tsc -p tsconfig.json",
+    "start": "prisma migrate deploy && node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/static": "^8.2.0",
+    "@mars/contracts": "0.1.0",
+    "@prisma/client": "^6.4.1",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.2.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "prisma": "^6.4.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3"
+  }
+}

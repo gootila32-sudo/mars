@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model GuildIntegration {
+  id             String   @id @default(cuid())
+  guildId        String   @unique
+  guildName      String?
+  enabled        Boolean  @default(true)
+  wakeWord       String   @default("agent")
+  systemPrompt   String   @default("You are a Discord voice operations agent.")
+  allowedActions String[] @default(["MUTE_MEMBER", "UNMUTE_MEMBER", "DEAFEN_MEMBER", "UNDEAFEN_MEMBER", "MOVE_MEMBER"])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  dispatchLogs DispatchLog[]
+}
+
+model DispatchLog {
+  id        String   @id @default(cuid())
+  guildId   String
+  channelId String
+  transcript String
+  speakerName String
+  action    String
+  detail    String
+  ok        Boolean
+  createdAt DateTime @default(now())
+
+  guild GuildIntegration @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+
+  @@index([guildId, createdAt])
+}

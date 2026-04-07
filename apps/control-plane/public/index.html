@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MARS Control Plane</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <h1>MARS</h1>
+          <p>Discord Voice Agent</p>
+        </div>
+
+        <nav class="nav" aria-label="Main navigation">
+          <button class="nav-btn is-active" type="button" data-tab="policy">Guild Policy</button>
+          <button class="nav-btn" type="button" data-tab="dispatch">Dispatch</button>
+          <button class="nav-btn" type="button" data-tab="guilds">Guilds</button>
+          <button class="nav-btn" type="button" data-tab="logs">Logs</button>
+        </nav>
+
+        <section class="sidebar-card">
+          <h2>Stack</h2>
+          <p class="muted">LiveKit-native processing and Discord action runtime.</p>
+        </section>
+
+        <section class="sidebar-card">
+          <h2>Status</h2>
+          <p id="statusText" class="status-text">Ready.</p>
+        </section>
+      </aside>
+
+      <main class="main-panel">
+        <header class="main-header">
+          <h2 id="mainTitle">Guild Policy</h2>
+          <p>Simple and production-friendly operations panel.</p>
+        </header>
+
+        <section class="content-panel is-active" data-panel="policy">
+          <article class="card">
+            <h3>Guild Policy</h3>
+
+            <div class="form-row">
+              <label for="guildId">Guild ID</label>
+              <input id="guildId" type="text" placeholder="123456789012345678" />
+            </div>
+
+            <div class="form-row">
+              <label for="wakeWord">Wake Word</label>
+              <input id="wakeWord" type="text" value="agent" />
+            </div>
+
+            <div class="form-row">
+              <label for="systemPrompt">System Prompt</label>
+              <textarea id="systemPrompt">You are a Discord voice operations agent. Only execute safe moderation actions in this server.</textarea>
+            </div>
+
+            <div class="form-row">
+              <label>Allowed Actions</label>
+              <div id="allowedActions" class="check-list"></div>
+            </div>
+
+            <div class="form-row inline">
+              <input id="enabled" type="checkbox" checked />
+              <label for="enabled">Agent Enabled</label>
+            </div>
+
+            <button id="saveGuildBtn" class="btn" type="button">Save Guild Config</button>
+          </article>
+        </section>
+
+        <section class="content-panel" data-panel="dispatch">
+          <article class="card">
+            <h3>Dispatch Command</h3>
+
+            <div class="form-row">
+              <label for="dispatchGuildId">Guild ID</label>
+              <input id="dispatchGuildId" type="text" />
+            </div>
+
+            <div class="form-row">
+              <label for="dispatchChannelId">Voice Channel ID</label>
+              <input id="dispatchChannelId" type="text" />
+            </div>
+
+            <div class="form-row">
+              <label for="dispatchSpeaker">Speaker</label>
+              <input id="dispatchSpeaker" type="text" value="Moderator" />
+            </div>
+
+            <div class="form-row">
+              <label for="dispatchTranscript">Transcript</label>
+              <textarea id="dispatchTranscript">agent mute John</textarea>
+            </div>
+
+            <button id="dispatchBtn" class="btn" type="button">Dispatch</button>
+          </article>
+        </section>
+
+        <section class="content-panel" data-panel="guilds">
+          <article class="card">
+            <h3>Configured Guilds</h3>
+            <div id="guildList" class="list"></div>
+          </article>
+        </section>
+
+        <section class="content-panel" data-panel="logs">
+          <article class="card">
+            <h3>Recent Dispatch Logs</h3>
+            <div id="logList" class="list"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
